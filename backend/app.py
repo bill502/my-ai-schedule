@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import flask-cors
 import scheduler
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # List all events
 @app.route('/events', methods=['GET'])
@@ -61,6 +63,5 @@ def delete_event(event_id):
     return jsonify({"message": "Event deleted"})
 
 if __name__ == '__main__':
-    # Initialize the database before starting the API
     scheduler.init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
