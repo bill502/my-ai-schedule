@@ -1,70 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './EventForm.css';
 
-const EventForm = ({ onSubmit, initialData, onCancel }) => {
-  const [formData, setFormData] = useState(
-    initialData || {
-      title: '',
-      start_datetime: '',
-      end_datetime: '',
-      details: '',
-    }
-  );
+// Helper to parse initialData for edit mode
+const parseInitialData = (data) => {
+  if (!data) return { date: '', start_time: '', end_time: '', title: '', details: '' };
+  const start = new Date(data.start_datetime);
+  const end = new Date(data.end_datetime);
+  const dateStr = start.toISOString().split('T')[0];
+  const startTimeStr = start.toTimeString().slice(0, 5);
+  const endTimeStr = end.toTimeString().slice(0, 5);
+  return { date: dateStr, start_time: startTimeStr, end_time: endTimeStr, title: data.title || '', details: data.details || '' };
+};
 
-  const handleChange = e => {
+const EventForm = ({ onSubmit, initialData, onCancel }) => {
+  const defaultData = { date: '', start_time: '', end_time: '', title: '', details: '' };
+  const [formData, setFormData] = useState(initialData ? parseInitialData(initialData) : defaultData);
+
+  useEffect(() => {
+    setFormData(initialData ? parseInitialData(initialData) : defaultData);
+  }, [initialData]);
+
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    const { date, start_time, end_time, title, details } = formData;
+    const start_datetime = `${date}T${start_time}:00`;
+    const end_datetime = `${date}T${end_time}:00`;
+    onSubmit({ title, details, start_datetime, end_datetime });
     if (!initialData) {
-      setFormData({
-        title: '',
-        start_datetime: '',
-        end_datetime: '',
-        details: '',
-      });
+      setFormData(defaultData);
     }
-  };
-
-  // Helper function to format datetime for preview
-  const formatDateTimePreview = (dateTimeStr) => {
-    const dateObj = new Date(dateTimeStr);
-    if (isNaN(dateObj)) return '';
-    const options = {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    };
-    return dateObj.toLocaleString(undefined, options);
   };
 
   return (
     <form className="event-form" onSubmit={handleSubmit}>
       <div className="form-group">
+        <label>Date:</label>
+        <input type="date" name="date" value={formData.date} onChange={handleChange} required />
+      </div>
+      <div className="form-group">
+        <label>Start Time:</label>
+        <input type="time" name="start_time" value={formData.start_time} onChange={handleChange} required />
+      </div>
+      <div className="form-group">
+        <label>End Time:</label>
+        <input type="time" name="end_time" value={formData.end_time} onChange={handleChange} required />
+      </div>
+      <div className="form-group">
         <label>Title:</label>
         <input type="text" name="title" value={formData.title} onChange={handleChange} required />
-      </div>
-      <div className="form-group">
-        <label>Start DateTime:</label>
-        <input type="datetime-local" name="start_datetime" value={formData.start_datetime} onChange={handleChange} required />
-        {formData.start_datetime && (
-          <small className="datetime-preview">
-            {formatDateTimePreview(formData.start_datetime)}
-          </small>
-        )}
-      </div>
-      <div className="form-group">
-        <label>End DateTime:</label>
-        <input type="datetime-local" name="end_datetime" value={formData.end_datetime} onChange={handleChange} required />
-        {formData.end_datetime && (
-          <small className="datetime-preview">
-            {formatDateTimePreview(formData.end_datetime)}
-          </small>
-        )}
       </div>
       <div className="form-group">
         <label>Details:</label>

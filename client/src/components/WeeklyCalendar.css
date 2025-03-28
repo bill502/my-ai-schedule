@@ -1,0 +1,68 @@
+.weekly-calendar {
+    border: 1px solid #ddd;
+    font-family: 'Roboto', sans-serif;
+  }
+  
+  .calendar-header {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .day-header {
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  .calendar-body {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    height: 960px;  /* Visible area (16 hours * 60px) */
+    overflow-y: auto;
+    position: relative;
+  }
+  
+  .time-column {
+    display: flex;
+    flex-direction: column;
+    height: 1440px;  /* Full day: 24 hours * 60px */
+  }
+  
+  .time-slot {
+    height: 60px;
+    border-bottom: 1px solid #eee;
+    text-align: right;
+    padding: 2px 5px;
+    font-size: 0.8rem;
+    color: #888;
+  }
+  
+  .day-column {
+    height: 1440px;
+    border-left: 1px solid #eee;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .hour-slot {
+    height: 60px;
+    border-bottom: 1px solid #eee;
+    position: relative;
+  }
+  
+  .event-block {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 0;
+    padding: 2px 4px;
+    color: white;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 1;
+  }
+  
