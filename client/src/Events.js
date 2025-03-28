@@ -9,7 +9,7 @@ function Events() {
     details: '',
   });
 
-  // Function to fetch events from the backend API
+  // Fetch events from the backend API
   const fetchEvents = async () => {
     try {
       const res = await fetch('http://localhost:5000/events');
@@ -24,7 +24,7 @@ function Events() {
     fetchEvents();
   }, []);
 
-  // Handle form input changes
+  // Handle input changes for the new event form
   const handleChange = (e) => {
     setNewEvent({
       ...newEvent,
@@ -62,6 +62,21 @@ function Events() {
     }
   };
 
+  // Delete an event by calling the API's DELETE endpoint
+  const handleDelete = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:5000/events/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      console.log('Event deleted:', data);
+      // Refresh the events list after deletion
+      fetchEvents();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    }
+  };
+
   return (
     <div>
       <h1>My Events</h1>
@@ -73,6 +88,7 @@ function Events() {
             <li key={event.id}>
               <strong>{event.title}</strong> from {event.start_datetime} to {event.end_datetime}
               <p>{event.details}</p>
+              <button onClick={() => handleDelete(event.id)}>Delete</button>
             </li>
           ))}
         </ul>
