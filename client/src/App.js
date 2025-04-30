@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import EventList from './components/EventList';
 import EventForm from './components/EventForm';
@@ -10,8 +10,9 @@ function App() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [applyText, setApplyText] = useState('');
+  const [applyResults, setApplyResults] = useState([]);
 
-  // Compute current week start (Monday)
   const getCurrentMonday = () => {
     const today = new Date();
     const day = (today.getDay() + 6) % 7; // Monday=0
@@ -23,91 +24,109 @@ function App() {
 
   const [currentWeek, setCurrentWeek] = useState(getCurrentMonday());
 
-  // Fetch events from backend
-  const fetchEvents = async () => {
+  // Memoized fetchEvents to satisfy linter
+  const fetchEvents = useCallback(async () => {
+    const start = currentWeek.toISOString().split('T')[0];
+    const endDate = new Date(currentWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const end = endDate.toISOString().split('T')[0];
     try {
-      const res = await fetch('http://localhost:5000/events');
+      const res = await fetch(
+        `http://localhost:5000/events?start=${start}&end=${end}`
+      );
       const data = await res.json();
       setEvents(data);
-    } catch (error) {
-      console.error('Error fetching events:', error);
+    } catch (err) {
+      console.error('Error fetching events:', err);
     }
-  };
+  }, [currentWeek]);
 
+  // Fetch when currentWeek changes
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
-  // Add event handler with conflict error handling
   const handleAddEvent = async (eventData) => {
     setFormError(null);
-    const res = await fetch('http://localhost:5000/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(eventData),
-    });
-    if (res.status === 409) {
-      const { error } = await res.json();
-      setFormError(error);
-    } else {
-      await res.json();
+    try {
+      const res = await fetch('http://localhost:5000/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData)
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to add');
       fetchEvents();
+    } catch (err) {
+      setFormError(err.message);
     }
   };
 
-  // Delete event handler
   const handleDeleteEvent = async (id) => {
     try {
       await fetch(`http://localhost:5000/events/${id}`, { method: 'DELETE' });
       fetchEvents();
-    } catch (error) {
-      console.error('Error deleting event:', error);
+    } catch (err) {
+      console.error('Error deleting event:', err);
     }
   };
 
-  // Enter edit mode
   const handleEditEvent = (event) => {
     setFormError(null);
     setEditingEvent(event);
   };
 
-  // Update event handler with conflict error handling
   const handleUpdateEvent = async (updatedData) => {
     setFormError(null);
-    const res = await fetch(`http://localhost:5000/events/${editingEvent.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedData),
-    });
-    if (res.status === 409) {
-      const { error } = await res.json();
-      setFormError(error);
-    } else {
-      await res.json();
+    try {
+      const res = await fetch(
+        `http://localhost:5000/events/${editingEvent.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedData)
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update');
       setEditingEvent(null);
       fetchEvents();
+    } catch (err) {
+      setFormError(err.message);
     }
   };
 
-  // Highlight selected event when clicked in calendar
-  const handleSelectEvent = (event) => {
-    setSelectedEventId(event.id);
+  const handleApplyActions = async () => {
+    setApplyResults([]);
+    try {
+      const payload = JSON.parse(applyText);
+      const res = await fetch('http://localhost:5000/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.results) {
+        setApplyResults(data.results);
+        fetchEvents();
+      } else if (data.error) {
+        setApplyResults([data.error]);
+      }
+    } catch (err) {
+      setApplyResults([err.message]);
+    }
   };
 
-  // Week navigation handlers
   const handlePrevWeek = () => {
     setCurrentWeek(
       new Date(currentWeek.getTime() - 7 * 24 * 60 * 60 * 1000)
     );
   };
-
   const handleNextWeek = () => {
     setCurrentWeek(
       new Date(currentWeek.getTime() + 7 * 24 * 60 * 60 * 1000)
     );
   };
 
-  // Format week range for display
   const formatWeekRange = () => {
     const start = currentWeek.toLocaleDateString();
     const end = new Date(
@@ -116,26 +135,26 @@ function App() {
     return `${start} - ${end}`;
   };
 
+  const handleSelectEvent = (event) => setSelectedEventId(event.id);
+
   return (
     <div className="App">
       <Header />
       <main className="container">
-        {/* Calendar Section */}
-        <div className="calendar-section">
-          <div className="week-navigation">
-            <button onClick={handlePrevWeek}>Previous Week</button>
+        <section className="calendar-section">
+          <div className="week-nav">
+            <button onClick={handlePrevWeek}>‹</button>
             <span>{formatWeekRange()}</span>
-            <button onClick={handleNextWeek}>Next Week</button>
+            <button onClick={handleNextWeek}>›</button>
           </div>
           <WeeklyCalendar
             events={events}
             weekStartDate={currentWeek}
             onSelectEvent={handleSelectEvent}
           />
-        </div>
+        </section>
 
-        {/* Side Panel for Add/Edit and List */}
-        <div className="side-panel">
+        <aside className="side-panel">
           {editingEvent ? (
             <EventForm
               initialData={editingEvent}
@@ -154,7 +173,23 @@ function App() {
             onEdit={handleEditEvent}
             selectedEventId={selectedEventId}
           />
-        </div>
+
+          <div className="apply-actions">
+            <h2>Apply JSON Actions</h2>
+            <textarea
+              rows={6}
+              value={applyText}
+              onChange={e => setApplyText(e.target.value)}
+              placeholder="Paste actions JSON here"
+            />
+            <button onClick={handleApplyActions}>Apply</button>
+            <ul className="apply-results">
+              {applyResults.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        </aside>
       </main>
     </div>
   );
