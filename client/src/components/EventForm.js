@@ -12,7 +12,7 @@ const parseInitialData = (data) => {
   return { date: dateStr, start_time: startTimeStr, end_time: endTimeStr, title: data.title || '', details: data.details || '' };
 };
 
-const EventForm = ({ onSubmit, initialData, onCancel }) => {
+const EventForm = ({ onSubmit, initialData, onCancel, error }) => {
   const defaultData = { date: '', start_time: '', end_time: '', title: '', details: '' };
   const [formData, setFormData] = useState(initialData ? parseInitialData(initialData) : defaultData);
 
@@ -37,6 +37,7 @@ const EventForm = ({ onSubmit, initialData, onCancel }) => {
 
   return (
     <form className="event-form" onSubmit={handleSubmit}>
+      {error && <div className="form-error">{error}</div>}
       <div className="form-group">
         <label>Date:</label>
         <input type="date" name="date" value={formData.date} onChange={handleChange} required />
